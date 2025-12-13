@@ -38,10 +38,10 @@ def get_train_dataloader(cfg: ProjectConfig):
             subjects=dataset_config.train_subjects,
             assets_folder=Path(cfg.env.assets_folder),
             fps=dataset_config.fps_train,
+            max_timestamps=dataset_config.max_timestamps,
+            filter_subjects=dataset_config.filter_subjects,
             **train_kwargs
-        )
-        print(train_dataset[0])
-        
+        )     
 
         val_dataset = HHDataset(
             name=dataset_config.name,
@@ -51,6 +51,8 @@ def get_train_dataloader(cfg: ProjectConfig):
             subjects=dataset_config.test_subjects,
             assets_folder=Path(cfg.env.assets_folder),
             fps=dataset_config.fps_eval,
+            max_timestamps=dataset_config.max_timestamps,
+            filter_subjects=dataset_config.filter_subjects,
             **val_kwargs
         )
 
@@ -125,6 +127,8 @@ def get_eval_dataloader(cfg: ProjectConfig):
             subjects=dataset_config.test_subjects,
             assets_folder=Path(cfg.env.assets_folder),
             fps=dataset_config.fps_eval,
+            max_timestamps=dataset_config.max_timestamps,
+            filter_subjects=dataset_config.filter_subjects,
             **dataset_kwargs
         )
 

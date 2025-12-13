@@ -69,10 +69,10 @@ python main.py -c config/env.yaml scenarios/gb_main.yaml -- \
 
 ```bash
 python main.py -c config/env.yaml scenarios/mirror.yaml -- \
-  run.job=sample run.name=01_mirror sample.target=meshes \
-  resume.checkpoint="experiments/001_01_mirror/checkpoints/checkpoint-step-0003000.pth" \
-  dataloader.batch_size=256 sample.mode="sample_01" \
-  run.datasets=["behave"] sample.dataset=normal sample.repetitions=1 
+  run.job=sample run.name=001_01_mirror sample.target=meshes \
+  resume.checkpoint="experiments/001_01_mirror/checkpoints/checkpoint-step-0010000.pth" \
+  dataloader.batch_size=2 sample.mode="sample_01" \
+  run.datasets=["behave"] sample.dataset=normal sample.repetitions=3
 ```
 
 
@@ -80,7 +80,7 @@ Use the command below to run evaluation on the generated samples. The `eval.samp
 which modalities are evaluated (possible values: `sbj_contact`, `obj_contact`,):
 ```bash
 python main.py -c config/env.yaml scenarios/mirror.yaml -- \
-  run.job=eval run.name=01_mirror resume.step=-1 
+  run.job=eval run.name=2data resume.step=-1 eval.sampling_target=["sbj","second_sbj"] 
 ```
 
 ## Training

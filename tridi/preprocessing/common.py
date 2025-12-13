@@ -301,14 +301,80 @@ def preprocess_worker(
     # sample.obj_center = sample.obj_verts.mean(axis=0)
 
     # ============ 4 scale
-    if normalize:
-        preprocess_scale = 2 / (np.abs(sample.sbj_mesh.bounds[1] - sample.sbj_mesh.bounds[0])).max()
-
-        sample.sbj_mesh.apply_scale(preprocess_scale)
-        #sample.obj_mesh.apply_scale(preprocess_scale)
-        # sample.obj_verts *= preprocess_scale
+    #if normalize:
+    if True:
+        # 先中心化：计算两个subject所有顶点的共同中心点，然后移到原点
+        all_vertices = [sample.sbj_mesh.vertices]
+        
+        # 如果存在第二个subject，也包含它的顶点
+        if hasattr(sample, 'second_sbj_mesh') and sample.second_sbj_mesh is not None:
+            all_vertices.append(sample.second_sbj_mesh.vertices)
+        
+        # 计算所有顶点的共同中心
+        all_vertices = np.concatenate(all_vertices, axis=0)
+        center = all_vertices.mean(axis=0)
+        
+        # 中心化第一个subject
+        sample.sbj_mesh.vertices -= center
         if sample.sbj_joints is not None:
-            sample.sbj_joints *= preprocess_scale
+            sample.sbj_joints -= center
+        if hasattr(sample, 'sbj_pc') and sample.sbj_pc is not None:
+            sample.sbj_pc -= center
+        if hasattr(sample, 'sbj_smpl') and sample.sbj_smpl is not None:
+            if 'transl' in sample.sbj_smpl:
+                sample.sbj_smpl['transl'] -= center
+        
+        # 中心化第二个subject
+        if hasattr(sample, 'second_sbj_mesh') and sample.second_sbj_mesh is not None:
+            sample.second_sbj_mesh.vertices -= center
+        if hasattr(sample, 'second_sbj_joints') and sample.second_sbj_joints is not None:
+            sample.second_sbj_joints -= center
+        if hasattr(sample, 'second_sbj_pc') and sample.second_sbj_pc is not None:
+            sample.second_sbj_pc -= center
+        if hasattr(sample, 'second_sbj_smpl') and sample.second_sbj_smpl is not None:
+            if 'transl' in sample.second_sbj_smpl:
+                sample.second_sbj_smpl['transl'] -= center
+        
+        # 计算归一化尺度，考虑两个subject的bounds
+        # 注意：中心化后transl应该已经接近原点，所以主要考虑mesh的bounds
+        # sbj_bounds = np.abs(sample.sbj_mesh.bounds[1] - sample.sbj_mesh.bounds[0])
+        # max_bound = sbj_bounds.max()
+        # if hasattr(sample, 'second_sbj_mesh') and sample.second_sbj_mesh is not None:
+        #     second_sbj_bounds = np.abs(sample.second_sbj_mesh.bounds[1] - sample.second_sbj_mesh.bounds[0])
+        #     max_bound = max(max_bound, second_sbj_bounds.max())
+        
+        if hasattr(sample, 'sbj_smpl') and sample.sbj_smpl is not None:
+            if 'transl' in sample.sbj_smpl:
+                transl_range_sbj = np.abs(sample.sbj_smpl['transl']).max()
+        if hasattr(sample, 'second_sbj_smpl') and sample.second_sbj_smpl is not None:
+            if 'transl' in sample.second_sbj_smpl:
+                transl_range_second_sbj = np.abs(sample.second_sbj_smpl['transl']).max()
+        
+        preprocess_scale = 1 / max(transl_range_sbj, transl_range_second_sbj)
+
+        # sample.sbj_mesh.apply_scale(preprocess_scale)
+        # #sample.obj_mesh.apply_scale(preprocess_scale)
+        # # sample.obj_verts *= preprocess_scale
+        # if sample.sbj_joints is not None:
+        #     sample.sbj_joints *= preprocess_scale
+        # if hasattr(sample, 'sbj_pc') and sample.sbj_pc is not None:
+        #     sample.sbj_pc *= preprocess_scale
+
+        if hasattr(sample, 'sbj_smpl') and sample.sbj_smpl is not None:
+            if 'transl' in sample.sbj_smpl:
+                sample.sbj_smpl['transl'] *= preprocess_scale
+        
+        # 对第二个subject也进行归一化
+        # if hasattr(sample, 'second_sbj_mesh') and sample.second_sbj_mesh is not None:
+        #     sample.second_sbj_mesh.apply_scale(preprocess_scale)
+        # if hasattr(sample, 'second_sbj_joints') and sample.second_sbj_joints is not None:
+        #     sample.second_sbj_joints *= preprocess_scale
+        # if hasattr(sample, 'second_sbj_pc') and sample.second_sbj_pc is not None:
+        #     sample.second_sbj_pc *= preprocess_scale
+        # 同时归一化第二个subject的SMPL参数中的translation
+        if hasattr(sample, 'second_sbj_smpl') and sample.second_sbj_smpl is not None:
+            if 'transl' in sample.second_sbj_smpl:
+                sample.second_sbj_smpl['transl'] *= preprocess_scale
 
         sample.scale = preprocess_scale
     else:

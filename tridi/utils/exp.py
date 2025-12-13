@@ -32,12 +32,16 @@ def parse_arguments():
 
 
 def init_logging(cfg: ProjectConfig):
+    # Ensure the directory exists before creating the log file
+    log_dir = Path(cfg.run.path)
+    log_dir.mkdir(parents=True, exist_ok=True)
+    
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S',
         handlers=[
-            logging.FileHandler(Path(cfg.run.path) / f"log_{cfg.run.job}", mode='a'),
+            logging.FileHandler(log_dir / f"log_{cfg.run.job}", mode='a'),
             logging.StreamHandler()
         ]
     )

@@ -36,6 +36,8 @@ class HHDataset:
     include_pointnext: bool = False
     assets_folder: Optional[Path] = None
     fps: Optional[int] = 30
+    max_timestamps: Optional[int] = None  # 限制每个序列的最大timestamp数量
+    filter_subjects: Optional[List[str]] = None  # 只加载指定的subjects
 
     def __post_init__(self) -> None:
         # Open h5 dataset
@@ -87,7 +89,7 @@ class HHDataset:
 
     def __getitem__(self, idx: int) -> HHBatchData:
         sample = self.data[idx]
-        sequence = self.h5dataset[sample.subject]["Default"]
+        sequence = self.h5dataset[sample.subject]
 
         sbj_gender = sequence.attrs['gender']
         sbj_pose = np.concatenate([
@@ -145,8 +147,14 @@ class HHDataset:
         T = 0
         skipped = 0
         
-        for sbj in self.sbjs.keys():
-            seq = self.h5dataset[sbj]["Default"]
+        # 过滤 subjects
+        subjects_to_load = self.sbjs.keys()
+        if self.filter_subjects is not None:
+            subjects_to_load = [s for s in subjects_to_load if s in self.filter_subjects]
+            logger.info(f"Filtering subjects to: {subjects_to_load}")
+        
+        for sbj in subjects_to_load:
+            seq = self.h5dataset[sbj]
             # print content of seq
             # for key in seq.keys():
             #     print(f"  {key}: {seq[key].shape}")
@@ -158,7 +166,10 @@ class HHDataset:
                 continue
 
             t_stamps = list(range(seq.attrs["T"]))
-
+            
+            # 限制每个序列的timestamp数量
+            if self.max_timestamps is not None:
+                t_stamps = t_stamps[:self.max_timestamps]
 
             T += len(t_stamps)
             seq_data = [

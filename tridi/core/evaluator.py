@@ -15,8 +15,10 @@ class Evaluator:
         self.cfg = cfg
 
     def evaluate(self):
-        base_samples_folder = (Path(self.cfg.run.path) / "artifacts" /
-                          f"step_{self.cfg.resume.step}_samples")
+        #base_samples_folder = (Path(self.cfg.run.path) / "artifacts" / f"step_{self.cfg.resume.step}_samples")
+        base_samples_folder = Path("experiments/001_01_mirror/artifacts/step_-1_samples")
+        print(base_samples_folder)
+
         logger.info(f"Experiment: {self.cfg.run.name} step: {self.cfg.resume.step}")
         # Generation
         if self.cfg.eval.use_gen_metrics:
@@ -32,6 +34,7 @@ class Evaluator:
                     }
 
                     samples_files = list(samples_folder.glob(f"{sample_target}/samples_rep_*.hdf5"))
+                    print(samples_files)
                     for samples_file in samples_files:
                         metrics["1-NNA"].append(generation.nearest_neighbor_accuracy(
                             self.cfg, samples_file, dataset,"test",
@@ -50,7 +53,10 @@ class Evaluator:
                             sample_target,
                         ))
                     for k, v in metrics.items():
-                        logger.info(f"\t\t{k:<6s} - {sample_target}: {np.mean(v):.4f} ± {np.std(v):.4f}")
+                        if len(v) > 0:
+                            logger.info(f"\t\t{k:<6s} - {sample_target}: {np.mean(v):.4f} ± {np.std(v):.4f}")
+                        else:
+                            logger.warning(f"\t\t{k:<6s} - {sample_target}: No data (empty list)")
 
         # Reconstruction
         if self.cfg.eval.use_rec_metrics:
@@ -60,37 +66,38 @@ class Evaluator:
                 samples_folder = base_samples_folder / dataset
 
                 # Reconstruction
+                # metrics = {
+                #     "MPJPE": [], "MPJPE_PA": [], "SBJ_CONTACT_MESHES":[], "SBJ_CONTACT_DIFFUSED": [],
+                #     "OBJ_V2V": [], "OBJ_CENTER": [], "OBJ_CONTACT_MESHES": [], "OBJ_CONTACT_DIFFUSED": []
                 metrics = {
-                    "MPJPE": [], "MPJPE_PA": [], "SBJ_CONTACT_MESHES":[], "SBJ_CONTACT_DIFFUSED": [],
-                    "OBJ_V2V": [], "OBJ_CENTER": [], "OBJ_CONTACT_MESHES": [], "OBJ_CONTACT_DIFFUSED": []
-
+                    "MPJPE": [], "MPJPE_PA": [], "MPJPE_SECOND_SBJ": [], "MPJPE_PA_SECOND_SBJ": []
                 }
                 for sample_target in self.cfg.eval.sampling_target:
                     # subject
                     if 'sbj' in sample_target:
                         samples_files = list(samples_folder.glob(f"{sample_target}/samples_rep_*.hdf5"))
                         for samples_file in samples_files:
-                            mpjpe, mpjpe_pa, sbj_contact_meshes, sbj_contact_diffused = \
+                            mpjpe, mpjpe_pa, mpjpe_second_sbj, mpjpe_pa_second_sbj = \
                                 reconstruction.get_sbj_metrics(
                                     self.cfg, samples_file, dataset
                                 )
                             metrics["MPJPE"].append(mpjpe)
                             metrics["MPJPE_PA"].append(mpjpe_pa)
-                            metrics["SBJ_CONTACT_MESHES"].append(sbj_contact_meshes)
-                            metrics["SBJ_CONTACT_DIFFUSED"].append(sbj_contact_diffused)
+                            metrics["MPJPE_SECOND_SBJ"].append(mpjpe_second_sbj)
+                            metrics["MPJPE_PA_SECOND_SBJ"].append(mpjpe_pa_second_sbj)
 
                     # object
-                    if 'obj' in sample_target:
-                        samples_files = list(samples_folder.glob(f"{sample_target}/samples_rep_*.hdf5"))
-                        for samples_file in samples_files:
-                            obj_v2v, obj_center_dist, obj_contact_meshes, obj_contact_diffused = \
-                                reconstruction.get_obj_metrics(
-                                    self.cfg, samples_file, dataset
-                                )
-                            metrics["OBJ_V2V"].append(obj_v2v)
-                            metrics["OBJ_CENTER"].append(obj_center_dist)
-                            metrics["OBJ_CONTACT_MESHES"].append(obj_contact_meshes)
-                            metrics["OBJ_CONTACT_DIFFUSED"].append(obj_contact_diffused)
+                    # if 'obj' in sample_target:
+                    #     samples_files = list(samples_folder.glob(f"{sample_target}/samples_rep_*.hdf5"))
+                    #     for samples_file in samples_files:
+                    #         obj_v2v, obj_center_dist, obj_contact_meshes, obj_contact_diffused = \
+                    #             reconstruction.get_obj_metrics(
+                    #                 self.cfg, samples_file, dataset
+                    #             )
+                    #         metrics["OBJ_V2V"].append(obj_v2v)
+                    #         metrics["OBJ_CENTER"].append(obj_center_dist)
+                    #         metrics["OBJ_CONTACT_MESHES"].append(obj_contact_meshes)
+                    #         metrics["OBJ_CONTACT_DIFFUSED"].append(obj_contact_diffused)
 
                 for k, v in metrics.items():
                     if len(v) > 0:

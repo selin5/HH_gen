@@ -26,8 +26,8 @@ class PreprocessBehaveConfig:
     # Downsample from to 10fps or 1fps, only applicable to 30fps data
     downsample: str = "10fps"
     # Preprocess only selected subjects
-    subjects: List = field(default_factory=lambda: ["*"])
-    # Preprocess only selected objects
+    subjects: List = field(default_factory=lambda: ["Sub01"]) # ["*"])
+    # Preprocess only selected object
     objects: List = field(default_factory=lambda: ["yogamat"])
     # Threshold for computing human-object contacts (if no precomputed contacts are provided)
     contact_threshold: float = 0.020

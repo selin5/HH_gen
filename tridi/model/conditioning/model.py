@@ -36,7 +36,7 @@ class ConditioningModel(ModelMixin):
     def get_input_with_conditioning(
         self,
         x_t: Tensor,
-        t: Optional[Tensor],
+        t: Optional[Tensor] = None,
         t_aux: Optional[Tensor] = None,  # second timestep for unidiffuser
     ):
         # Get dimensions

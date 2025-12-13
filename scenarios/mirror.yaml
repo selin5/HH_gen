@@ -1,15 +1,18 @@
 behave:
-  objects:
-  - yogamat
-  obj2groupid:
-    yogamat: 13
-  obj2classid:
-    yogamat: 13
+  # objects:
+  # - yogamat
+  # obj2groupid:
+  #   yogamat: 13
+  # obj2classid:
+  #   yogamat: 13
   downsample_factor: 1
   fps_train: 10
   fps_eval: 1
   augment_rotation: false
   augment_symmetry: false
+  max_timestamps: 2
+  # filter_subjects:
+  # - Sub01_train
 
 model_denoising:
   name: transformer_unidiffuser_3
@@ -29,16 +32,16 @@ run:
   datasets:
   - behave
 dataloader:
-  batch_size: 1024
+  batch_size: 2
   workers: 12
   sampler: weighted
 train:
   mixed_precision: 'no'
   limit_train_batches: null
   log_step_freq: 100
-  checkpoint_freq: 1000
+  checkpoint_freq: 5000
   max_steps: 300000
-  print_step_freq: 1
+  print_step_freq: 10
   limit_val_batches: null
   losses:
     denoise_1: 10.0

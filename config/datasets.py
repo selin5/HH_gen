@@ -28,6 +28,8 @@ class DatasetConfig:
     fps_eval: int = 1
     augment_rotation: bool = True
     augment_symmetry: bool = True
+    max_timestamps: Optional[int] = None  # 限制每个序列的最大timestamp数量
+    filter_subjects: Optional[List[str]] = None  # 只加载指定的subjects，如 ["Sub01_train"]
 
 
 @dataclass

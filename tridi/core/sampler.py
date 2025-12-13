@@ -157,93 +157,122 @@ class Sampler:
             samples_folder = self.base_samples_folder / f"{dataloader.dataset.name}" / f"{sample_mode}"
             samples_folder.mkdir(parents=True, exist_ok=True)
 
-            # get sequences with lengths from the dataset
-            sbj2sct = dataloader.dataset.get_sbj2sct()  # sct = sequence, class_id, T
+            # Collect all unique subjects and their max timestamps
+            sbj2max_t = {}
+            for sample in dataloader.dataset.data:
+                sbj = sample.subject
+                t_stamp = sample.t_stamp
+                if sbj not in sbj2max_t:
+                    sbj2max_t[sbj] = t_stamp
+                else:
+                    sbj2max_t[sbj] = max(sbj2max_t[sbj], t_stamp)
 
             base_name = Path(target_name).stem
             S = self.cfg.sample.repetitions
             h5py_files = [h5py.File(str(samples_folder / f"{base_name}_rep_{s:02d}.hdf5"), "w") for s in range(S)]
 
+            # Get faces for both subjects
+            sbj_f = self.mesh_model.get_faces_np()
+            
+            # Initialize hdf5 structure
             for h5py_file in h5py_files:
-                for sbj, sequences in sbj2sct.items():
+                for sbj, max_t in sbj2max_t.items():
                     sbj_group = h5py_file.create_group(sbj)
-                    for seq, class_id, T in sequences:
-                        seq_group = sbj_group.create_group(f"{seq}")
-                        n_obj_v = self.canonical_obj_meshes[class_id].vertices.shape[0]
-                        obj_f = self.canonical_obj_meshes[class_id].faces
-                        sbj_f = self.mesh_model.get_faces_np()
-                        # old: sbj_vertices, sbj_faces
-                        seq_group.create_dataset("sbj_v", shape=(T, 6890, 3))
-                        seq_group.create_dataset("sbj_f", shape=(sbj_f.shape[0], 3), data=sbj_f)
-                        if self.cfg.model_conditioning.use_contacts != "NONE":
-                            seq_group.create_dataset("sbj_contact_z", shape=(T, self.cfg.model.data_contact_channels))
-                            seq_group.create_dataset("sbj_contact", shape=(T, 6890))
-                        # old: obj_vertices, obj_faces
-                        seq_group.create_dataset("obj_v", shape=(T, n_obj_v, 3))
-                        seq_group.create_dataset("obj_f", shape=(obj_f.shape[0], 3), data=obj_f)
-                        # sbj params, old: sbj_pose, sbj_c, sbj_shape
-                        seq_group.create_dataset("sbj_smpl_pose", shape=(T, 1+21+15+15, 9))
-                        seq_group.create_dataset("sbj_smpl_transl", shape=(T, 3))
-                        seq_group.create_dataset("sbj_smpl_betas", shape=(T, 10))
-                        seq_group.create_dataset("sbj_j", shape=(T, 73, 3))
-                        # obj params
-                        seq_group.create_dataset("obj_c", shape=(T, 3))
-                        seq_group.create_dataset("obj_R", shape=(T, 9))
-                        # attributes
-                        seq_group.attrs['T'] = T
-
+                    T = max_t + 1  # t_stamp is 0-indexed
+                    
+                    # First subject datasets
+                    sbj_group.create_dataset("sbj_v", shape=(T, 6890, 3))
+                    sbj_group.create_dataset("sbj_f", shape=(sbj_f.shape[0], 3), data=sbj_f)
+                    sbj_group.create_dataset("sbj_smpl_global", shape=(T, 1, 9))
+                    sbj_group.create_dataset("sbj_smpl_body", shape=(T, 21, 9))
+                    sbj_group.create_dataset("sbj_smpl_lh", shape=(T, 15, 9))
+                    sbj_group.create_dataset("sbj_smpl_rh", shape=(T, 15, 9))
+                    sbj_group.create_dataset("sbj_smpl_transl", shape=(T, 3))
+                    sbj_group.create_dataset("sbj_smpl_betas", shape=(T, 10))
+                    sbj_group.create_dataset("sbj_j", shape=(T, 73, 3))
+                    
+                    # Second subject datasets
+                    sbj_group.create_dataset("second_sbj_v", shape=(T, 6890, 3))
+                    sbj_group.create_dataset("second_sbj_f", shape=(sbj_f.shape[0], 3), data=sbj_f)
+                    sbj_group.create_dataset("second_sbj_smpl_global", shape=(T, 1, 9))
+                    sbj_group.create_dataset("second_sbj_smpl_body", shape=(T, 21, 9))
+                    sbj_group.create_dataset("second_sbj_smpl_lh", shape=(T, 15, 9))
+                    sbj_group.create_dataset("second_sbj_smpl_rh", shape=(T, 15, 9))
+                    sbj_group.create_dataset("second_sbj_smpl_transl", shape=(T, 3))
+                    sbj_group.create_dataset("second_sbj_smpl_betas", shape=(T, 10))
+                    sbj_group.create_dataset("second_sbj_j", shape=(T, 73, 3))
+                    
+                    # Attributes
+                    sbj_group.attrs['T'] = T
 
             # prediction loop
             for batch_idx, batch in enumerate(dataloader):
                 for repetition_id in range(self.cfg.sample.repetitions):
                     # Get outputs
-                    output, captions = self.sample_step(batch)
-                    sbj_vertices, obj_vertices, sbj_joints = self.mesh_model.get_meshes_th(
-                        output, batch.obj_class, batch.scale, sbj_gender=batch.sbj_gender, return_joints=True
+                    output = self.sample_step(batch)
+
+                    # Convert output to meshes
+                    sbj_meshes, second_sbj_meshes = self.mesh_model.get_meshes(
+                        output, batch.scale, batch.sbj_gender
                     )
 
-                    # convert rotation from 6d to matrix
-                    # output = output
-                    sbj_pose = torch.cat([
-                        output.sbj_global,
-                        output.sbj_pose,
-                    ], dim=1).reshape(-1, 52, 6)
-                    sbj_pose = rotation_6d_to_matrix(sbj_pose).reshape(-1, 52, 9).cpu().numpy()
-                    obj_R = output.obj_R.reshape(-1, 1, 6)
-                    obj_R = rotation_6d_to_matrix(obj_R).reshape(-1, 9).cpu().numpy()
+                    # Get joints
+                    _, sbj_joints, _, second_sbj_joints = self.mesh_model.get_meshes_wkpts_th(
+                        output, scale=batch.scale, sbj_gender=batch.sbj_gender, return_joints=True
+                    )
+                    sbj_joints = sbj_joints.cpu().numpy()
+                    second_sbj_joints = second_sbj_joints.cpu().numpy()
 
-                    # Decode contacts
-                    if self.cfg.model_conditioning.use_contacts != "NONE":
-                        is_sampling_contacts = self.cfg.sample.mode[2] == "1"
-                        contacts_mask = self.contact_model.decode_contacts_np(
-                            batch.sbj_contacts_full, output.contacts,
-                            batch.sbj_contact_indexes, is_sampling_contacts
-                        )
-                        if is_sampling_contacts:
-                            contacts_z = output.contacts.cpu().numpy()
-                        else:
-                            contacts_z = batch.sbj_contacts.cpu().numpy()
+                    # Convert rotation from 6d to matrix for first subject
+                    B = len(output.sbj_pose)
+                    sbj_global = output.sbj_global.reshape(B, 1, 6)
+                    sbj_global = rotation_6d_to_matrix(sbj_global).reshape(B, 1, 9).cpu().numpy()
+                    
+                    # sbj_pose contains all 51 joints (21 body + 15 left hand + 15 right hand)
+                    sbj_pose = output.sbj_pose.reshape(B, -1, 6)  # (B, 51, 6)
+                    sbj_pose = rotation_6d_to_matrix(sbj_pose).reshape(B, -1, 9)  # (B, 51, 9)
+                    sbj_body = sbj_pose[:, :21].cpu().numpy()  # (B, 21, 9)
+                    sbj_lh = sbj_pose[:, 21:21+15].cpu().numpy()  # (B, 15, 9)
+                    sbj_rh = sbj_pose[:, 21+15:].cpu().numpy()  # (B, 15, 9)
 
-                    # save to hdf5
-                    sbj_vertices, obj_vertices = sbj_vertices.cpu().numpy(), obj_vertices.cpu().numpy()
-                    for sample_idx, class_id in enumerate(batch.obj_class.cpu().numpy()):
+                    # Convert rotation from 6d to matrix for second subject
+                    second_sbj_global = output.second_sbj_global.reshape(B, 1, 6)
+                    second_sbj_global = rotation_6d_to_matrix(second_sbj_global).reshape(B, 1, 9).cpu().numpy()
+                    
+                    # second_sbj_pose contains all 51 joints (21 body + 15 left hand + 15 right hand)
+                    second_sbj_pose = output.second_sbj_pose.reshape(B, -1, 6)  # (B, 51, 6)
+                    second_sbj_pose = rotation_6d_to_matrix(second_sbj_pose).reshape(B, -1, 9)  # (B, 51, 9)
+                    second_sbj_body = second_sbj_pose[:, :21].cpu().numpy()  # (B, 21, 9)
+                    second_sbj_lh = second_sbj_pose[:, 21:21+15].cpu().numpy()  # (B, 15, 9)
+                    second_sbj_rh = second_sbj_pose[:, 21+15:].cpu().numpy()  # (B, 15, 9)
+
+                    # Save to hdf5
+                    for sample_idx in range(len(sbj_meshes)):
                         sbj = batch.sbj[sample_idx]
-                        obj = batch.obj[sample_idx]
-                        act = batch.act[sample_idx]
                         t_stamp = batch.t_stamp[sample_idx].item()
 
                         sbj_group = h5py_files[repetition_id][sbj]
-                        seq_group = sbj_group[f"{obj}_{act}"]
-                        n_obj_v = self.canonical_obj_meshes[class_id].vertices.shape[0]
 
-                        seq_group['sbj_v'][t_stamp] = sbj_vertices[sample_idx]
-                        seq_group['obj_v'][t_stamp] = obj_vertices[sample_idx][:n_obj_v]
-                        if self.cfg.model_conditioning.use_contacts != "NONE":
-                            seq_group['sbj_contact_z'][t_stamp] = contacts_z[sample_idx]
-                            seq_group['sbj_contact'][t_stamp] = contacts_mask[sample_idx]
-                        seq_group['sbj_smpl_pose'][t_stamp] = sbj_pose[sample_idx]
-                        seq_group['sbj_smpl_transl'][t_stamp] = output.sbj_c[sample_idx].cpu().numpy()
-                        seq_group['sbj_smpl_betas'][t_stamp] = output.sbj_shape[sample_idx].cpu().numpy()
-                        seq_group['sbj_j'][t_stamp] = sbj_joints[sample_idx].cpu().numpy()
-                        seq_group['obj_c'][t_stamp] = output.obj_c[sample_idx].cpu().numpy()
-                        seq_group['obj_R'][t_stamp] = obj_R[sample_idx]
+                        # First subject
+                        sbj_group['sbj_v'][t_stamp] = sbj_meshes[sample_idx].vertices
+                        sbj_group['sbj_smpl_global'][t_stamp] = sbj_global[sample_idx]
+                        sbj_group['sbj_smpl_body'][t_stamp] = sbj_body[sample_idx]
+                        sbj_group['sbj_smpl_lh'][t_stamp] = sbj_lh[sample_idx]
+                        sbj_group['sbj_smpl_rh'][t_stamp] = sbj_rh[sample_idx]
+                        sbj_group['sbj_smpl_transl'][t_stamp] = output.sbj_c[sample_idx].cpu().numpy()
+                        sbj_group['sbj_smpl_betas'][t_stamp] = output.sbj_shape[sample_idx].cpu().numpy()
+                        sbj_group['sbj_j'][t_stamp] = sbj_joints[sample_idx]
+
+                        # Second subject
+                        sbj_group['second_sbj_v'][t_stamp] = second_sbj_meshes[sample_idx].vertices
+                        sbj_group['second_sbj_smpl_global'][t_stamp] = second_sbj_global[sample_idx]
+                        sbj_group['second_sbj_smpl_body'][t_stamp] = second_sbj_body[sample_idx]
+                        sbj_group['second_sbj_smpl_lh'][t_stamp] = second_sbj_lh[sample_idx]
+                        sbj_group['second_sbj_smpl_rh'][t_stamp] = second_sbj_rh[sample_idx]
+                        sbj_group['second_sbj_smpl_transl'][t_stamp] = output.second_sbj_c[sample_idx].cpu().numpy()
+                        sbj_group['second_sbj_smpl_betas'][t_stamp] = output.second_sbj_shape[sample_idx].cpu().numpy()
+                        sbj_group['second_sbj_j'][t_stamp] = second_sbj_joints[sample_idx]
+
+            # Close hdf5 files
+            for h5py_file in h5py_files:
+                h5py_file.close()

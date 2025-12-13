@@ -70,11 +70,11 @@ def get_sequences_from_split(split_file, subjects, actions, objects):
     return sequences
 
 
-def get_data_for_sequence(knn, sequence, dataset, hdf5_dataset, objname2classid):
-    sbj, obj, act = sequence
-    class_id = objname2classid[obj]
+def get_data_for_sequence(knn, sequence, dataset, hdf5_dataset):
+    #print("sequence: ", sequence)
+    sbj,_, _ = sequence
 
-    hdf5_sequence = hdf5_dataset[sbj][f"{obj}_{act}"]
+    hdf5_sequence = hdf5_dataset[sbj]
 
     T = hdf5_sequence.attrs["T"]
     T_stamps = range(T)
@@ -175,7 +175,7 @@ def get_data_for_sequence(knn, sequence, dataset, hdf5_dataset, objname2classid)
             raise RuntimeError(f"Unknown model labels {knn.model_labels}")
     labels = np.stack(labels, axis=0)
 
-    return features, class_id, labels
+    return features, labels
 
 
 def get_hdf5_files_for_nn(cfg, dataset_list):
@@ -305,8 +305,8 @@ def get_features_for_nn(
     for dataset_name, sequences_list in sequences.items():
         with h5py.File(hdf5_files[dataset_name], "r") as hdf5_dataset:
             for sequence in tqdm(sequences_list, ncols=80, leave=False):
-                _features, _, _labels = get_data_for_sequence(
-                    knn, sequence, dataset_name, hdf5_dataset, objname2classid
+                _features, _labels = get_data_for_sequence(
+                    knn, sequence, dataset_name, hdf5_dataset
                 )
 
                 if len(_features) == 0:

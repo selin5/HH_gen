@@ -188,7 +188,7 @@ class MeshModel:
 
     @torch.no_grad()
     def get_meshes(self, output: TriDiModelOutput,scale=1.0, sbj_gender=None):
-        sbj_vertices, obj_vertices = self.get_meshes_th(output, scale, sbj_gender)
+        sbj_vertices, second_sbj_vertices = self.get_meshes_th(output, scale, sbj_gender)
 
         # create subject mesh
         sbj_vertices = sbj_vertices.cpu().numpy()
@@ -196,7 +196,7 @@ class MeshModel:
         sbj_meshes = [trimesh.Trimesh(sbj_vertices[j], sbj_faces) for j in range(sbj_vertices.shape[0])]
 
         # second subject mesh
-        second_sbj_vertices = obj_vertices.cpu().numpy()
+        second_sbj_vertices = second_sbj_vertices.cpu().numpy()
         second_sbj_faces = self.smpl_m.faces
         second_sbj_meshes = [trimesh.Trimesh(second_sbj_vertices[j], second_sbj_faces) for j in range(second_sbj_vertices.shape[0])]
 

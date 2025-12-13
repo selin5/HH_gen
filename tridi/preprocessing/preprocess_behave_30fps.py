@@ -316,12 +316,12 @@ def preprocess(cfg):
             "right_hand_pose": body_model_params["right_hand_pose"].reshape(T, -1, 9).numpy()
         }
 
-        # create template mesh
-        sbj_faces = sbj_model.faces
-        sbj_mesh = trimesh.Trimesh(vertices=sbj_verts[0], faces=sbj_faces)
-
-        # save sbj mesh
-        sbj_mesh.export(target_folder / f"{seq_subject}_template_sbj.ply")
+        for i in range(T):
+            # create mesh
+            sbj_faces = sbj_model.faces
+            sbj_mesh = trimesh.Trimesh(vertices=sbj_verts[i], faces=sbj_faces)
+            # save sbj mesh
+            sbj_mesh.export(target_folder / f"{seq_subject}_sbj_{i}.ply")
 
         # =============Second sbj==============================
         # second_body_model_params = apply_symmetry_sbj(deepcopy(body_model_params))    
@@ -346,33 +346,41 @@ def preprocess(cfg):
             "right_hand_pose": second_body_model_params["right_hand_pose"].reshape(T, -1, 9).numpy()
         }
 
-        # create template mesh
-        second_sbj_faces = second_sbj_model.faces
-        second_sbj_mesh = trimesh.Trimesh(vertices=second_sbj_verts[0], faces=second_sbj_faces)
-        # save sbj mesh
-        second_sbj_mesh.export(target_folder / f"{seq_subject}_template_second_sbj.ply")
+        for i in range(T):
+            # create mesh
+            second_sbj_faces = second_sbj_model.faces
+            second_sbj_mesh = trimesh.Trimesh(vertices=second_sbj_verts[i], faces=second_sbj_faces)
+            # save sbj mesh
+            second_sbj_mesh.export(target_folder / f"{seq_subject}_second_sbj_{i}.ply")
         # ===========================================
 
-        # ============ 5 Align the ground plane ============
-        # if cfg.align_with_ground:
-        #     for i in range(T):
-        #         #     t_align_z = np.mean(sbj_verts[i], axis=0)
-        #         # else:
-        #         z_min = min(np.min(sbj_verts[i, :, 2])) #, np.min(obj_verts[i, :, 2]))
-        #         t_align_z = np.array([0.0, 0.0, -z_min], dtype=np.float32)
+        # ============ 5 Align the ground plane ============  
+        if len(preprocess_transforms) != T:
+            #dummy append
+            for _ in range(T - len(preprocess_transforms)):
+                preprocess_transforms.append({
+                    "R": np.eye(3, dtype=np.float32),
+                    "t": np.zeros(3, dtype=np.float32),
+                    "rot_center": np.zeros(3, dtype=np.float32)
+                })
+                
+        for i in range(T):
+            z_min_sbj = np.min(sbj_verts[i, :, 2])
+            z_min_second_sbj = np.min(second_sbj_verts[i, :, 2])
+            z_min = min(z_min_sbj, z_min_second_sbj)
+            t_align_z = np.array([0.0, 0.0, -z_min], dtype=np.float32)
 
-        #         preprocess_transforms[i]["t"] += t_align_z
+            preprocess_transforms[i]["t"] += t_align_z
 
-        #         sbj_verts[i] += t_align_z
-        #         # obj_verts[i] += t_align_z
-        #         sbj_joints[i] += t_align_z
-        #         sbj_smpl["transl"][i] += t_align_z
+            sbj_verts[i] += t_align_z
+            # obj_verts[i] += t_align_z
+            sbj_joints[i] += t_align_z
+            sbj_smpl["transl"][i] += t_align_z
 
-        #         second_sbj_verts[i] += t_align_z
-        #         # obj_verts[i] += t_align_z
-        #         second_sbj_joints[i] += t_align_z
-        #         second_sbj_smpl["transl"][i] += t_align_z
-        # t_align_z = 0
+            second_sbj_verts[i] += t_align_z
+            # obj_verts[i] += t_align_z
+            second_sbj_joints[i] += t_align_z
+            second_sbj_smpl["transl"][i] += t_align_z
         # ==================================================
 
         # ============ 7 preprocess each time stamp in parallel
@@ -429,15 +437,15 @@ def preprocess(cfg):
             preprocess_results.append(result)
         # ===========================================
 
-        print(preprocess_results[0])
+        # print(preprocess_results[0])
 
         # ============ 8 Save subject-specific data
         # contact_masks[f"{seq_subject}_{seq_object}_{seq_action}"] = contact_mask
         # seq_group_name = f"{seq_object}_{seq_action}"
-        seq_group_name = "Default"
-        if seq_group_name in h5py_file[seq_subject]:
-            del h5py_file[seq_subject][seq_group_name]
-        seq_group = h5py_file[seq_subject].create_group(seq_group_name)
+        # seq_group_name = "Default"
+        # if seq_group_name in h5py_file[seq_subject]:
+        #     del h5py_file[seq_subject][seq_group_name]
+        seq_group = h5py_file[seq_subject] #.create_group(seq_group_name)
         add_sequence_datasets_to_hdf5(seq_group, preprocess_results[0], T)
         add_meatada_to_hdf5(seq_group, seq_subject, T, sequence_info["gender"])
         for sample in preprocess_results:

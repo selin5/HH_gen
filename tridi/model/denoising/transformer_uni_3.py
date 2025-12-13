@@ -123,20 +123,35 @@ class TransformertUni3WayModel(nn.Module):
 
         return t_emb_1.unsqueeze(1), t_emb_2.unsqueeze(1)
 
-    def prepare_sbj(self, sbj):
+    def prepare_sbj(self, sbj, is_second=False):
         shape, global_orient, pose, global_transl = torch.split(sbj, [10, 6, 51*6, 3], dim=1)
 
-        shape = self.projection_S_shape(shape)
-        shape = shape + self.sbj_embedding + self.sbj_shape_embedding
+        if is_second:
+            # 第二个subject使用second相关的projection和embedding
+            shape_proj = self.projection_second_S_shape(shape)
+            shape = shape_proj + self.second_sbj_embedding + self.second_sbj_shape_embedding
 
-        global_orient = self.projection_S_orient(global_orient)
-        global_orient = global_orient + self.sbj_embedding + self.global_orient_embedding
+            global_orient_proj = self.projection_second_S_orient(global_orient)
+            global_orient = global_orient_proj + self.second_sbj_embedding + self.second_global_orient_embedding
 
-        pose = self.projection_S_pose(pose)
-        pose = pose + self.sbj_embedding + self.sbj_pose_embedding
+            pose_proj = self.projection_second_S_pose(pose)
+            pose = pose_proj + self.second_sbj_embedding + self.second_sbj_pose_embedding
 
-        global_transl = self.projection_S_transl(global_transl)
-        global_transl = global_transl + self.sbj_embedding + self.global_transl_embedding
+            global_transl_proj = self.projection_second_S_transl(global_transl)
+            global_transl = global_transl_proj + self.second_sbj_embedding + self.second_global_transl_embedding
+        else:
+            # 第一个subject使用原始的projection和embedding
+            shape = self.projection_S_shape(shape)
+            shape = shape + self.sbj_embedding + self.sbj_shape_embedding
+
+            global_orient = self.projection_S_orient(global_orient)
+            global_orient = global_orient + self.sbj_embedding + self.global_orient_embedding
+
+            pose = self.projection_S_pose(pose)
+            pose = pose + self.sbj_embedding + self.sbj_pose_embedding
+
+            global_transl = self.projection_S_transl(global_transl)
+            global_transl = global_transl + self.sbj_embedding + self.global_transl_embedding
 
         return torch.stack([shape, global_orient, pose, global_transl], dim=1)  # B x 4 x D
 
@@ -160,8 +175,8 @@ class TransformertUni3WayModel(nn.Module):
 
     def forward(self, sbj, second_sbj, t1, t2):
         t_1, t_2 = self.prepare_time(t1, t2, sbj.device)
-        sbj = self.prepare_sbj(sbj)
-        second_sbj = self.prepare_sbj(second_sbj)
+        sbj = self.prepare_sbj(sbj, is_second=False)
+        second_sbj = self.prepare_sbj(second_sbj, is_second=True)
 
         x = torch.cat([sbj, second_sbj, t_1, t_2], dim=1)
         x = self.layernorm(x)

@@ -152,11 +152,11 @@ class BaseTriDiModel(ModelMixin):
     def get_input_with_conditioning(
         self,
         x_t: Tensor,
-        t: Optional[Tensor],
+        t: Optional[Tensor] = None, # main timestep
         t_aux: Optional[Tensor] = None,  # second timestep for unidiffuser
     ):
         return self.conditioning_model.get_input_with_conditioning(
-            x_t, t=t, t_aux=t_aux
+            x_t
         )
 
     def forward_train(self, *args, **kwargs):

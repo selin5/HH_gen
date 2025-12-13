@@ -147,19 +147,20 @@ def get_sbj_metrics(
     test_sequences = get_sequences_for_nn(cfg, test_datasets, test_hdf5)
 
     # load downsample mask
-    sbj_contact_indexes = np.load(Path(cfg.env.assets_folder) / "smpl_template_decimated_idxs.npy")
+    # sbj_contact_indexes = np.load(Path(cfg.env.assets_folder) / "smpl_template_decimated_idxs.npy")
 
     mpjpe_results, mpjpe_pa_results = [], []
-    sbj_contact_mesh, sbj_contact_diffused = [], []
+    mpjpe_results_second_sbj, mpjpe_pa_results_second_sbj = [], []
+    # sbj_contact_mesh, sbj_contact_diffused = [], []
     with h5py.File(test_hdf5[dataset], "r") as test_hdf5_dataset, \
         h5py.File(samples_file, "r") as samples_hdf5_dataset:
 
         for sequence in tqdm(test_sequences[dataset], ncols=80, leave=False):
             sbj, obj, act = sequence
 
-            test_sequence = test_hdf5_dataset[sbj][f"{obj}_{act}"]
-            sampled_sequence = samples_hdf5_dataset[sbj][f"{obj}_{act}"]
-            T = test_sequence.attrs["T"]
+            test_sequence = test_hdf5_dataset[sbj]
+            sampled_sequence = samples_hdf5_dataset[sbj]
+            T = 2 #test_sequence.attrs["T"]
 
             T_stamps = list(range(T))
             mask = np.ones(T, dtype=bool)
@@ -171,30 +172,39 @@ def get_sbj_metrics(
                 mpjpe_results.append(get_mpjpe(sampled_joints, test_joints))
                 mpjpe_pa_results.append(get_mpjpe_pa(sampled_joints, test_joints))
 
-            # contact
-            test_obj_v = np.asarray(test_sequence['obj_v'][mask], dtype=np.float32)
-            test_sbj_v = np.asarray(test_sequence['sbj_v'][mask], dtype=np.float32)
-            obj_f = sampled_sequence['obj_f']
-            sampled_sbj_v = np.asarray(sampled_sequence['sbj_v'][mask], dtype=np.float32)
-            sbj_f = np.asarray(sampled_sequence['sbj_f'], dtype=np.int32)
-            gt_contacts_mask, contacts_similarity = get_contact_similarity_sampled_sbj(
-                sampled_sbj_v[:, sbj_contact_indexes], test_obj_v, obj_f,
-                test_sbj_v[:, sbj_contact_indexes], sbj_f, contact_threshold=0.05
-            )
-            sbj_contact_mesh.append(contacts_similarity)
+                test_joints_second_sbj = test_sequence["second_sbj_j"][t_stamp]
+                sampled_joints_second_sbj = sampled_sequence["second_sbj_j"][t_stamp]
 
-            if "sbj_contact" in sampled_sequence.keys():
-                diffused_contact_mask = np.asarray(sampled_sequence['sbj_contact'][mask], dtype=np.float32)
-                diffused_contact_mask = diffused_contact_mask[:, sbj_contact_indexes]
-                similarity_mask = gt_contacts_mask == diffused_contact_mask  # T x 6890
-                sbj_contact_diffused.append(similarity_mask.mean(1))  # T
+                mpjpe_results_second_sbj.append(get_mpjpe(sampled_joints_second_sbj, test_joints_second_sbj))
+                mpjpe_pa_results_second_sbj.append(get_mpjpe_pa(sampled_joints_second_sbj, test_joints_second_sbj))
+
+            # contact
+            # test_obj_v = np.asarray(test_sequence['obj_v'][mask], dtype=np.float32)
+            # test_sbj_v = np.asarray(test_sequence['sbj_v'][mask], dtype=np.float32)
+            # obj_f = sampled_sequence['obj_f']
+            # sampled_sbj_v = np.asarray(sampled_sequence['sbj_v'][mask], dtype=np.float32)
+            # sbj_f = np.asarray(sampled_sequence['sbj_f'], dtype=np.int32)
+            # gt_contacts_mask, contacts_similarity = get_contact_similarity_sampled_sbj(
+            #     sampled_sbj_v[:, sbj_contact_indexes], test_obj_v, obj_f,
+            #     test_sbj_v[:, sbj_contact_indexes], sbj_f, contact_threshold=0.05
+            # )
+            # sbj_contact_mesh.append(contacts_similarity)
+
+            # if "sbj_contact" in sampled_sequence.keys():
+            #     diffused_contact_mask = np.asarray(sampled_sequence['sbj_contact'][mask], dtype=np.float32)
+            #     diffused_contact_mask = diffused_contact_mask[:, sbj_contact_indexes]
+            #     similarity_mask = gt_contacts_mask == diffused_contact_mask  # T x 6890
+            #     sbj_contact_diffused.append(similarity_mask.mean(1))  # T
 
     mpjpe_results = np.array(mpjpe_results)
     mpjpe_pa_results = np.array(mpjpe_pa_results)
-    sbj_contact_mesh = np.concatenate(sbj_contact_mesh, 0) if len(sbj_contact_mesh) > 0 else [0]
-    sbj_contact_diffused = np.concatenate(sbj_contact_diffused, 0) if len(sbj_contact_diffused) > 0 else [0]
+    # sbj_contact_mesh = np.concatenate(sbj_contact_mesh, 0) if len(sbj_contact_mesh) > 0 else [0]
+    # sbj_contact_diffused = np.concatenate(sbj_contact_diffused, 0) if len(sbj_contact_diffused) > 0 else [0]
+    mpjpe_results_second_sbj = np.array(mpjpe_results_second_sbj)
+    mpjpe_pa_results_second_sbj = np.array(mpjpe_pa_results_second_sbj)
 
-    return mpjpe_results, mpjpe_pa_results, sbj_contact_mesh, sbj_contact_diffused
+    # return mpjpe_results, mpjpe_pa_results, sbj_contact_mesh, sbj_contact_diffused
+    return mpjpe_results, mpjpe_pa_results, mpjpe_results_second_sbj, mpjpe_pa_results_second_sbj
 
 
 @torch.no_grad()
