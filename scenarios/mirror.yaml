@@ -1,10 +1,4 @@
 behave:
-  # objects:
-  # - yogamat
-  # obj2groupid:
-  #   yogamat: 13
-  # obj2classid:
-  #   yogamat: 13
   downsample_factor: 1
   fps_train: 10
   fps_eval: 1
@@ -33,7 +27,7 @@ run:
   datasets:
   - behave
 dataloader:
-  batch_size: 512 #2
+  batch_size: 1024 #2
   workers: 12
   sampler: weighted
 train:

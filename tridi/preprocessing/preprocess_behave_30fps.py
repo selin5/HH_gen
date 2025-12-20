@@ -271,18 +271,17 @@ def preprocess(cfg):
         # ============ 1 Load object poses and subject SMPL params
         smpl_params = dict(np.load(sequence / "smpl_fit_all.npz")) #['poses', 'betas', 'trans', 'save_name', 'frame_times', 'gender']
         t_stamps = smpl_params["frame_times"]
-                # downsample from 30fps to 10fps
+        T_original = len(t_stamps)
+        
+        # downsample from 30fps to 10fps or 1fps
+        downsample_factor = 1
         if cfg.behave.downsample != "None":
             if cfg.behave.downsample == "10fps":
+                downsample_factor = 3
                 t_stamps = t_stamps[::3]
-                smpl_indices = smpl_indices[::3]
-                obj_indices = obj_indices[::3]
             elif cfg.behave.downsample == "1fps":
+                downsample_factor = 30
                 t_stamps = t_stamps[::30]
-                smpl_indices = smpl_indices[::30]
-                obj_indices = obj_indices[::30]
-            else:
-                pass
         T = len(t_stamps)
 
         # ============ 2 extract vertices for subject
@@ -296,12 +295,28 @@ def preprocess(cfg):
             use_pca=False, num_betas=10, batch_size=T
         )
 
-        # convert parameters
-        th_pose_axisangle = torch.tensor(smpl_params["poses"].reshape(T, 52, 3))
+        # convert parameters - downsample poses if needed
+        poses_original = smpl_params["poses"].reshape(T_original, 52, 3)
+        if downsample_factor > 1:
+            poses_downsampled = poses_original[::downsample_factor]
+        else:
+            poses_downsampled = poses_original
+        th_pose_axisangle = torch.tensor(poses_downsampled)
         th_pose_rotmat = th_posemap_axisang(th_pose_axisangle.reshape(T * 52, 3)).reshape(T, 52, 9)
+        
+        # downsample betas and trans if needed (they are per-frame)
+        betas = smpl_params['betas']
+        trans = smpl_params["trans"]
+        if downsample_factor > 1:
+            # Check if betas and trans are per-frame (shape: [T, ...]) or constant (shape: [...])
+            if len(betas.shape) > 1 and betas.shape[0] == T_original:
+                betas = betas[::downsample_factor]
+            if len(trans.shape) > 1 and trans.shape[0] == T_original:
+                trans = trans[::downsample_factor]
+        
         body_model_params = {
-            "betas": torch.tensor(smpl_params['betas']),
-            "transl": torch.tensor(smpl_params["trans"]),
+            "betas": torch.tensor(betas),
+            "transl": torch.tensor(trans),
             "global_orient": th_pose_rotmat[:, :1].reshape(T, -1, 9),
             "body_pose": th_pose_rotmat[:, 1:22].reshape(T, -1, 9),
             "left_hand_pose": th_pose_rotmat[:, 22:37].reshape(T, -1, 9),
