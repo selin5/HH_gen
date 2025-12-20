@@ -87,6 +87,7 @@ class BaseTriDiModel(ModelMixin):
         self,
         # Input configuration
         data_sbj_channels: int,
+        data_second_sbj_channels: int,
         # diffusion parameters
         denoise_mode: str,
         beta_start: float,
@@ -110,7 +111,7 @@ class BaseTriDiModel(ModelMixin):
         # Input size
         # sbj_shape, sbj_global_pose, sbj_pose, sbj_c, obj_pose
         self.data_sbj_channels = data_sbj_channels
-        self.data_second_sbj_channels = data_sbj_channels
+        self.data_second_sbj_channels = data_second_sbj_channels
         self.data_channels = self.data_sbj_channels + self.data_second_sbj_channels
 
         # Output size
@@ -126,6 +127,7 @@ class BaseTriDiModel(ModelMixin):
             name=denoising_model_config.name,
             dim_timestep_embed=denoising_model_config.dim_timestep_embed,
             dim_sbj=self.data_sbj_channels,
+            dim_second_sbj=self.data_second_sbj_channels,
             dim_output=self.out_channels,
             # name, dim_timestep_embed, dim_hidden, num_layers
             **denoising_model_config.params

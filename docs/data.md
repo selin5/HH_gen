@@ -105,8 +105,7 @@ python -m hoigen.preprocessing.preprocess_behave -c ./config/env.yaml \
 
 ```bash
 python -m tridi.preprocessing.preprocess_behave_30fps -c ./config/env.yaml -- behave.split="train" behave.downsample="10fps"
-python -m tridi.preprocessing.preprocess_behave_30fps -c ./config/env.yaml -- behave.split="test" behave.downsample="1fps" \
-  behave.split_file="data/raw/behave/split.json" \
+python -m tridi.preprocessing.preprocess_behave_30fps -c ./config/env.yaml -- behave.split="test" behave.downsample="1fps" 
 ```
 
 python -m tridi.preprocessing.preprocess_behave -c ./config/env.yaml -- behave.split="train" behave.split_file="./assets/behave_only_1fps.json" \

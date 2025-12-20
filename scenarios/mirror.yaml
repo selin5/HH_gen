@@ -24,6 +24,7 @@ model_denoising:
     nhead: 8
 model:
   data_sbj_channels: 325
+  data_second_sbj_channels: 325
   denoise_mode: sample
   beta_start: 1.0e-05
   beta_end: 0.008

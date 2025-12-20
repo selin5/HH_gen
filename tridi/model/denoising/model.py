@@ -13,6 +13,7 @@ class DenoisingModel(ModelMixin):
         self,
         name: str,
         dim_sbj: int,
+        dim_second_sbj: int,
         dim_timestep_embed: int,
         dim_output: int,
         **kwargs
@@ -24,6 +25,7 @@ class DenoisingModel(ModelMixin):
             self.autocast_context = torch.autocast('cuda', dtype=torch.float32)
             self.model = TransformertUni3WayModel(
                 dim_sbj=dim_sbj, 
+                dim_second_sbj=dim_second_sbj,
                 dim_timestep_embed=dim_timestep_embed,
                 dim_output=dim_output,
                 **kwargs
