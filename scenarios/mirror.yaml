@@ -10,7 +10,7 @@ behave:
   fps_eval: 1
   augment_rotation: false
   augment_symmetry: false
-  max_timestamps: 2
+  # max_timestamps: 2
   # filter_subjects:
   # - Sub01_train
 
@@ -33,7 +33,7 @@ run:
   datasets:
   - behave
 dataloader:
-  batch_size: 2
+  batch_size: 512 #2
   workers: 12
   sampler: weighted
 train:

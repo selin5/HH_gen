@@ -271,6 +271,18 @@ def preprocess(cfg):
         # ============ 1 Load object poses and subject SMPL params
         smpl_params = dict(np.load(sequence / "smpl_fit_all.npz")) #['poses', 'betas', 'trans', 'save_name', 'frame_times', 'gender']
         t_stamps = smpl_params["frame_times"]
+                # downsample from 30fps to 10fps
+        if cfg.behave.downsample != "None":
+            if cfg.behave.downsample == "10fps":
+                t_stamps = t_stamps[::3]
+                smpl_indices = smpl_indices[::3]
+                obj_indices = obj_indices[::3]
+            elif cfg.behave.downsample == "1fps":
+                t_stamps = t_stamps[::30]
+                smpl_indices = smpl_indices[::30]
+                obj_indices = obj_indices[::30]
+            else:
+                pass
         T = len(t_stamps)
 
         # ============ 2 extract vertices for subject
