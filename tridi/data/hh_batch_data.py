@@ -9,6 +9,7 @@ from torch import Tensor
 class HHBatchData:
     # info
     sbj: Union[str, List[str], None]
+    second_sbj: Union[str, List[str], None]
     path: Union[str, List[str], None] = None
     t_stamp: Union[int, List[int], None] = None
     # sbj
@@ -32,7 +33,7 @@ class HHBatchData:
     meta: dict = field(default_factory=lambda: {})
 
     def to_string(self):
-        info = f"HHBatchData: sbj={self.sbj}, t_stamp={self.t_stamp}, "
+        info = f"HHBatchData: sbj={self.sbj}, second_sbj={self.second_sbj}, t_stamp={self.t_stamp}, "
         info += f"sbj_shape={None if self.sbj_shape is None else self.sbj_shape.shape}, "
         info += f"sbj_global={None if self.sbj_global is None else self.sbj_global.shape}, "
         info += f"sbj_pose={None if self.sbj_pose is None else self.sbj_pose.shape}, "

@@ -49,7 +49,8 @@ class HHDataset:
         self.h5dataset = h5py.File(self.h5dataset_path, "r")
 
         if self.split_file is not None:
-            self.sbjs = self._get_sbjs_from_split()  # assumes file with sbj, obj, act triplets
+            self.sbjs = self._get_sbjs_from_split()  
+            self.second_sbjs = self.sbjs
         else:
             raise ValueError("Must provide split file for HH dataset.")
 
@@ -98,6 +99,7 @@ class HHDataset:
             sequence['sbj_smpl_rh'][sample.t_stamp],
         ], axis=0).reshape((51, 3, 3))
         sbj_global = sequence['sbj_smpl_global'][sample.t_stamp]
+        # print("sbj_global: ", sequence['sbj_smpl_global'].shape)
         # convert to 6d representation
         sbj_global = matrix_to_rotation_6d(sbj_global.reshape(3, 3)).reshape(-1)
         sbj_pose = matrix_to_rotation_6d(sbj_pose).reshape(-1)
@@ -121,6 +123,7 @@ class HHDataset:
                 "t_stamp": sample.t_stamp,
             },
             sbj=sample.subject,
+            second_sbj=sample.subject,
             t_stamp=sample.t_stamp,
             # subject
             sbj_shape=torch.tensor(sequence['sbj_smpl_betas'][sample.t_stamp], dtype=torch.float),
@@ -138,6 +141,8 @@ class HHDataset:
             scale=torch.tensor(sequence['prep_s'][sample.t_stamp], dtype=torch.float)
         )
 
+        # print("batch_data: ", batch_data.to_string())
+
         return batch_data
     
     def _load_data(self) -> List[H5DataSample]:
@@ -154,6 +159,8 @@ class HHDataset:
             logger.info(f"Filtering subjects to: {subjects_to_load}")
         
         for sbj in subjects_to_load:
+            print("sbj: ", sbj)
+            print("self.h5dataset: ", self.h5dataset.keys())
             seq = self.h5dataset[sbj]
             # print content of seq
             # for key in seq.keys():

@@ -69,6 +69,7 @@ def init_exp(arguments):
         if "run" in cli_config and "name" in cli_config.run:
             config.run.name = cli_config.run.name
             del cli_config.run.name
+            config.run.path = str(Path(config.env.experiments_folder) / config.run.name)
         # config = OmegaConf.merge(config, OmegaConf.from_dotlist(arguments.overrides))
     else:
         cli_config = None

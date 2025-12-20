@@ -64,9 +64,9 @@ class Embody3DConfig(DatasetConfig):
     name: str = 'embody3d'
     root: str = os.path.join("${env.datasets_folder}", "embody3d_smplh")
 
-    objects: List[str] = None
-    obj2groupid: Dict[str, int] = None
-    obj2classid:  Dict[str, int] = None
+    objects: List[str] = field(default_factory=list)
+    obj2groupid: Dict[str, int] = field(default_factory=dict)
+    obj2classid:  Dict[str, int] = field(default_factory=dict)
 
     # One has to specify either subjects and actions or split_file
     train_subjects: Optional[List[str]] = None

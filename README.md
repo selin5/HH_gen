@@ -91,7 +91,7 @@ python main.py -c config/env.yaml scenarios/gb_main.yaml -- \
 
 ```bash
 python main.py -c config/env.yaml scenarios/mirror.yaml -- \
-  run.name=01_mirror run.job=train
+  run.name=mirror run.job=train
 ```
 
 ## Citation

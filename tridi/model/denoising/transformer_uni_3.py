@@ -165,10 +165,10 @@ class TransformertUni3WayModel(nn.Module):
             self.decoder_S_transl(x[:, 3]),
         ], dim=1)
         second_sbj = torch.cat([
-            self.decoder_second_S_shape(x[:, 4]),
-            self.decoder_second_S_orient(x[:, 5]),
-            self.decoder_second_S_pose(x[:, 6]),
-            self.decoder_second_S_transl(x[:, 7]),
+            self.decoder_second_S_shape(x[:, 0]),
+            self.decoder_second_S_orient(x[:, 1]),
+            self.decoder_second_S_pose(x[:, 2]),
+            self.decoder_second_S_transl(x[:, 3]),
         ], dim=1)
 
         return sbj, second_sbj
