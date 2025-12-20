@@ -41,6 +41,7 @@ class TriDiModel(BaseTriDiModel):
             torch.stack([tzeros, tzeros], dim=1)
         ])
 
+
     def forward_train(
         self,
         sbj: Tensor,
@@ -50,6 +51,7 @@ class TriDiModel(BaseTriDiModel):
     ):
         # Get dimensions
         B, D_sbj = sbj.shape
+        B, D_second_sbj = second_sbj.shape
 
         # Sample random noise
         noise_sbj = torch.randn_like(sbj)
@@ -83,7 +85,7 @@ class TriDiModel(BaseTriDiModel):
 
             # Loss
             x_0_pred_sbj, x_0_pred_second_sbj = \
-                x_0_pred[:, :D_sbj], x_0_pred[:, D_sbj:D_sbj+D_sbj]
+                x_0_pred[:, :D_sbj], x_0_pred[:, D_sbj:D_sbj + D_second_sbj]
             loss = {
                 "denoise_1": F.l1_loss(x_0_pred_sbj, sbj),
                 "denoise_2": F.l1_loss(x_0_pred_second_sbj, second_sbj)

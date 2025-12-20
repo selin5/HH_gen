@@ -184,7 +184,4 @@ class TransformertUni3WayModel(nn.Module):
         x = self.transformer_encoder(x)
 
         sbj, second_sbj = self.unembed_prediction(x)
-        # print("sbj shape:", sbj.shape)
-        # print("second sbj shape:", second_sbj.shape) #([64, 325])
-
         return torch.cat([sbj, second_sbj], dim=1)

@@ -139,7 +139,9 @@ class Trainer:
         }
 
         checkpoint_name = f'checkpoint-step-{self.train_state.step:07d}.pth'
-        checkpoint_path = Path(self.cfg.run.path) / 'checkpoints' / checkpoint_name
+        checkpoint_dir = Path(self.cfg.run.path) / 'checkpoints'
+        checkpoint_dir.mkdir(parents=True, exist_ok=True)
+        checkpoint_path = checkpoint_dir / checkpoint_name
         torch.save(checkpoint_dict, checkpoint_path)
         logger.info(f'Saved checkpoint to {checkpoint_path}')
 

@@ -8,10 +8,10 @@ import os
 @dataclass
 class ConditioningModelConfig:
     # class number
-    use_class_conditioning: bool = True
+    use_class_conditioning: bool = False
     num_classes: int = 40  # actually number of groups - 40, 52, 64
     # pointnext encoding
-    use_pointnext_conditioning: bool = True
+    use_pointnext_conditioning: bool = False
     # contacts - for 3way unidiffuser
     use_contacts: str = "encoder_decimated_clip"  # "surface", "parts"
     contact_model: str = "gb_contacts"
