@@ -82,6 +82,30 @@ which modalities are evaluated (possible values: `sbj_contact`, `obj_contact`,):
 python main.py -c config/env.yaml scenarios/mirror.yaml -- \
   run.job=eval run.name=001_01_mirror resume.step=-1 eval.sampling_target=["sbj","second_sbj"] 
 ```
+evaluate gen_metrics together,but reconstruction metrics separately
+```bash
+python main.py -c config/env.yaml scenarios/chi3d.yaml -- \
+  run.job=eval run.name=chi3d resume.step=50000 \
+  'run.datasets=["chi3d"]' \
+  'eval.sampling_target=["sbj","second_sbj"]' \
+  eval.use_gen_metrics=true eval.use_rec_metrics=false
+```
+
+```bash
+python main.py -c config/env.yaml scenarios/chi3d.yaml -- \
+  run.job=eval run.name=chi3d resume.step=50000 \
+  'run.datasets=["chi3d"]' \
+  'eval.sampling_target=["sbj"]' \
+  eval.use_gen_metrics=false eval.use_rec_metrics=true
+```
+
+```bash
+python main.py -c config/env.yaml scenarios/chi3d.yaml -- \
+  run.job=eval run.name=chi3d resume.step=50000 \
+  'run.datasets=["chi3d"]' \
+  'eval.sampling_target=["second_sbj"]' \
+  eval.use_gen_metrics=false eval.use_rec_metrics=true
+```
 
 ## Training
 Use the following command to run the training:
