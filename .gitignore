@@ -19,7 +19,7 @@ visualization/
 *.pkl
 
 # config files
-env.yaml
+**/env.yaml
 
 #ignore all dataset
 /data/
